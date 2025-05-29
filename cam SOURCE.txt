@@ -1,0 +1,238 @@
+#NoEnv
+#SingleInstance, Force
+#Persistent
+#UseHook
+SendMode, InputThenPlay
+SetBatchLines, -1
+CoordMode, Pixel, Screen
+
+SetWorkingDir, %A_ScriptDir%
+#Include %A_ScriptDir%\JSON.ahk
+
+Gui, -Caption +E0x80000 +AlwaysOnTop
+Gui, Color, 242424
+Gui, Font, s10 c5856D6, Tahoma
+
+Gui, Add, Progress, x-5 y-2 w400 h25 c5856D6 Background242424, 100
+Gui, Add, Text, x95 y35, enter license key:
+Gui, Add, Edit, vUserKey x10 y65 w280 h25
+Gui, Add, Button, x100 y95 w100 h30 gSubmitKey +E0x80000, Enter
+Gui, Add, Text, x131 y105 w100 h30, enter
+
+Gui, Show, w300 h140, ZyuL V2
+WinSet, Transparent, 205, ZyuL V2
+
+WinGet, hwnd, ID, ZyuL V2
+hRgn := DllCall("CreateRoundRectRgn", "Int", 0, "Int", 0, "Int", 300, "Int", 140, "Int", 30, "Int", 30)
+DllCall("SetWindowRgn", "Ptr", hwnd, "Ptr", hRgn, "Int", true)
+
+Return
+
+SubmitKey:
+    Gui, Submit
+    if (true) {
+        Gui, Destroy
+        Gui, New, +AlwaysOnTop -Caption +ToolWindow
+        Gui, Color, 242424
+        Gui, Font, s10 c5856D6, Tahoma
+        Gui, Add, Text, x12 y4, valid license key, injecting...
+        Gui, Show, AutoSize Center, Injecting
+
+        WinSet, Transparent, 205, Injecting
+
+        WinGetPos, X, Y, W, H, Injecting
+        WinGet, hwnd, ID, Injecting
+        hRgn := DllCall("CreateRoundRectRgn", "int", 0, "int", 0, "int", W, "int", H, "int", 20, "int", 20, "ptr")
+        DllCall("SetWindowRgn", "ptr", hwnd, "ptr", hRgn, "int", true)
+
+        Sleep, 1000
+        Gui, Destroy
+
+        GoSub, MainScript
+    }
+Return
+
+
+MainScript:
+file := FileOpen("%A_ScriptDir%\config.json", "r")
+json := JSON.Load(file.Read())
+file.Close()
+AimbotKey := json.Binding.AimbotKey
+Toggle := json.Binding.Toggle
+
+DetectionSensitivity := json.PlayerDetection.DetectionSensitivity
+HexCode := json.PlayerDetection.HexCode
+Dot := json.PlayerDetection.Dot
+DotOpacity := json.PlayerDetection.DotOpacity 
+
+SmoothnessX := json.MouseMovement.SmoothnessX
+SmoothnessY := json.MouseMovement.SmoothnessY
+SmoothingFactorX := json.MouseMovement.SpeedX
+SmoothingFactorY := json.MouseMovement.SpeedY
+PixelMoveAmount := json.MouseMovement.PixelMoveAmount
+
+Prediction := json.Prediction.Prediction
+PredictionX := json.Prediction.PredictionX
+PredictionY := json.Prediction.PredictionY
+YOffset := json.Prediction.OffsetY
+
+FOVCircleX := json.FOVCircle.FOVCircleX
+FOVCircleY := json.FOVCircle.FOVCircleY
+Visible := json.FOVCircle.Visible
+Opacity := json.FOVCircle.Opacity  
+
+ScreenWidth := A_ScreenWidth
+ScreenHeight := A_ScreenHeight
+
+CenterX := ScreenWidth // 2
+CenterY := ScreenHeight // 2
+
+DllCall("QueryPerformanceFrequency", "Int64", Update)
+DllCall("QueryPerformanceCounter", "Int64", LastTime)
+
+SetTimer, Aim, 1
+SetTimer, UpdateDot, 20
+
+PreviousX := CenterX
+PreviousY := CenterY
+SmoothedX := CenterX
+SmoothedY := CenterY
+
+AimbotActive := false
+LookAtX := ""
+LookAtY := ""
+
+if (Toggle) {
+    Hotkey, *%AimbotKey%, ToggleAimbot
+} else {
+    Hotkey, *%AimbotKey% UP, DeactivateAimbot
+    Hotkey, *%AimbotKey%, ActivateAimbot
+}
+
+if (Visible) {
+    hCircle := makeCircle(0x5856D6, FOVCircleX, FOVCircleY, 2, Opacity)
+    Gui %hCircle%: Show, % Format("NoActivate x{} y{} w{} h{}", CenterX - FOVCircleX // 2, CenterY - FOVCircleY // 2, FOVCircleX, FOVCircleY)
+} else {
+    Gui, Destroy
+}
+
+ToggleAimbot:
+    AimbotActive := !AimbotActive
+    if (!AimbotActive) {
+        Gui, Dot: Destroy
+    }
+Return
+
+ActivateAimbot:
+    AimbotActive := true
+Return
+
+DeactivateAimbot:
+    AimbotActive := false
+    Gui, Dot: Destroy
+Return
+
+Aim:
+    if (AimbotActive) {
+        MouseGetPos, CurrentX, CurrentY
+
+        if (!PreviousX || !PreviousY) { 
+            SmoothedX := CurrentX
+            SmoothedY := CurrentY
+        }
+
+        Position := ModelSearch(CenterX - FOVCircleX // 2, CenterY - FOVCircleY // 2, CenterX + FOVCircleX // 2, CenterY + FOVCircleY // 2, HexCode, DetectionSensitivity)
+
+        if (!ErrorLevel && Position[1] != "" && Position[2] != "") {
+            LookAtX := Position[1]
+            LookAtY := Position[2] + YOffset
+
+            DeltaX := LookAtX - CenterX
+            DeltaY := LookAtY - CenterY
+
+            if (Prediction) {
+                DeltaX := DeltaX + PredictionX
+                DeltaY := DeltaY + PredictionY
+            }
+
+            MoveX := DeltaX * SmoothingFactorX
+            MoveY := DeltaY * SmoothingFactorY
+
+            SmoothedX := PreviousX + MoveX
+            SmoothedY := PreviousY + MoveY
+
+            SmoothedX := Clamp(SmoothedX, 0, ScreenWidth)
+            SmoothedY := Clamp(SmoothedY, 0, ScreenHeight)
+
+            PreviousX := SmoothedX
+            PreviousY := SmoothedY
+
+            DllCall("mouse_event", "UInt", 0x8000|0x0001, "Int", (SmoothedX * 65535) / ScreenWidth, "Int", (SmoothedY * 65535) / ScreenHeight, "UInt", 0, "UInt", 0)
+        } else {
+            LookAtX := ""
+            LookAtY := ""
+        }
+    }
+Return
+
+UpdateDot:
+    if (AimbotActive && LookAtX != "" && LookAtY != "") {
+        if (Dot) {
+            Gui, Dot: New, +AlwaysOnTop -Caption +ToolWindow +E0x20
+            Gui, Dot: Color, 0x5856D6
+            Gui, Dot: Show, NA x%LookAtX% y%LookAtY% w12 h12, DotOverlay
+            Gui, Dot: +Border
+            Gui, Dot: -Caption
+            WinSet, Transparent, % DotOpacity, DotOverlay
+            WinSet, Region, 0-0 W10 H10 R10-10, DotOverlay
+        }
+    } else {
+        Gui, Dot: Destroy
+    }
+Return
+
+Clamp(Value, Min, Max) {
+    if (Value < Min)
+        return Min
+    if (Value > Max)
+        return Max
+    return Value
+}
+
+ModelSearch(X1, Y1, X2, Y2, ColorIDs, Variation) {
+    Position := []
+    PixelSearch, OutputVarX, OutputVarY, X1, Y1, X2, Y2, ColorIDs, Variation, Fast RGB
+    if (!ErrorLevel) {
+        Position[1] := OutputVarX
+        Position[2] := OutputVarY
+    }
+    return Position
+}
+
+makeCircle(color := 0x5856D6, rX := 150, rY := 150, thickness := 10, transparency := 255) {
+	static lastHWND := 0
+    if (lastHWND) {
+        Gui, %lastHWND%: Destroy
+    }
+
+    outer := DllCall("CreateEllipticRgn", "Int", 0, "Int", 0, "Int", rX, "Int", rY)
+    inner := DllCall("CreateEllipticRgn", "Int", thickness, "Int", thickness, "Int", rX - thickness, "Int", rY - thickness)
+    DllCall("CombineRgn", "UInt", outer, "UInt", outer, "UInt", inner, "Int", 3)
+
+    Gui, New, +E0x20 +AlwaysOnTop +ToolWindow -Caption +HwndlastHWND
+    DllCall("SetWindowRgn", "UInt", lastHWND, "UInt", outer, "UInt", true)
+    Gui, Color, % "0x5856D6"
+    Gui, Show, % Format("NoActivate w{} h{}", rX*2, rY*2)
+    WinSet Transparent, % transparency, % "ahk_id " lastHWND
+    WinSet, Region, 0-0 W10 H10 R10-10, lastHWND
+
+    return lastHWND
+}
+
+MakeGui() {
+    Gui New, +E0x20 +AlwaysOnTop +ToolWindow -Caption +Hwndhwnd
+    return hwnd
+}
+
+ExitApp
+#SingleInstance off

@@ -1,0 +1,715 @@
+#SingleInstance, Force
+#Persistent
+SetBatchLines, -1
+CoordMode, Pixel, screen
+#Include data/JSON.ahk
+
+SplashWidth := 300
+SplashHeight := 330
+SplashCornerRadius := 30
+SplashFrameDirectory := "assets\frames1\"
+SplashFrameDelay := 20 ; Delay between frames in milliseconds
+SplashTotalFrames := 30
+
+Width := 1200
+Height := 687
+CornerRadius := 60
+TopBarVisible := true
+configsFolder := A_ScriptDir "\CONFIGS"
+FileCreateDir, %configsFolder% ; Make sure the folder exists
+
+; Set the path for the .txt file (default name and location)
+txtFilePath := configsFolder "\config.txt"
+
+; Load the content of data/config.json
+jsonFilePath := data/config.json
+FileRead, jsonContent, %jsonFilePath%
+gui_control_options :=  " -E0x200"
+
+MAIN123 := "MAIN.ahk"
+
+
+
+; Load the JSON data
+jsonData := LoadJson(jsonFilePath)
+
+Keybindinput := JsonData.Binding.AimbotKey
+FovX := JsonData.FOVCircle.FOVCircleX
+FovY := JsonData.FOVCircle.FOVCircleY
+Hexcode := JsonData.PlayerDetection.HexCode
+Senstiv := JsonData.PlayerDetection.DetectionSensitivity
+Pixel := JsonData.MouseMovement.PixelMoveAmount
+Factor := JsonData.MouseMovement.SpeedX
+Factor1 := JsonData.MouseMovement.SpeedY
+Smooth := JsonData.MouseMovement.SmoothnessX
+Smooth1 := JsonData.MouseMovement.SmoothnessY
+Offset := JsonData.Prediction.OffsetY
+Pred := JsonData.Prediction.Prediction
+PredX := JsonData.Prediction.PredictionX
+PredY := JsonData.Prediction.PredictionY
+Dot := JsonData.PlayerDetection.Dot
+Dotopac := JsonData.PlayerDetection.DotOpacity
+FOVopac := JsonData.FOVCircle.Opacity
+currentPage := "page1"
+
+; Set initial image based on FOVCircle.Visible state
+if (jsonData.Binding.Toggle = 1)  ; 1 means on, 0 means off
+{
+    SwitchPic := "assets/SwitchON.png" ; Set to "on" image
+} 
+else 
+{
+    SwitchPic := "assets/SwitchOFF.png" ; Set to "off" image
+}
+
+if (jsonData.FOVCircle.Visible = 1)
+{
+    SwitchPic1 := "assets/SwitchON.png"
+}
+else 
+{
+    SwitchPic1 := "assets/SwitchOFF.png" ; Set to "off" image
+}
+
+if (jsonData.Prediction.Prediction = 1)
+{
+    SwitchPic2 := "assets/SwitchON.png"
+}
+else 
+{
+    SwitchPic2 := "assets/SwitchOFF.png" ; Set to "off" image
+}
+
+if (jsonData.PlayerDetection.Dot = 1)
+{
+    SwitchPic3 := "assets/SwitchON.png"
+}
+else 
+{
+    SwitchPic3 := "assets/SwitchOFF.png" ; Set to "off" image
+}
+
+; Show Splash Screen
+Gui, +LastFound +AlwaysOnTop -Caption +ToolWindow
+WinSet, Transparent, 255
+Gui, Color, 151515
+Gui, Margin, 10, 10
+
+; Set rounded corners for the splash screen
+hRgn := DllCall("CreateRoundRectRgn", "int", 0, "int", 0, "int", SplashWidth + 1, "int", SplashHeight + 1, "int", SplashCornerRadius, "int", SplashCornerRadius, "ptr")
+DllCall("SetWindowRgn", "ptr", WinExist(), "ptr", hRgn, "int", true)
+DllCall("DeleteObject", "ptr", hRgn)
+
+Gui, Add, Picture, x75 y50 w150 h150 BackgroundTrans, assets/rectangleSPLASH.png
+Gui, Add, Picture, x50 y230 w200 h80 BackgroundTrans, assets/rectangleSPLASH2.png
+Gui, Add, Picture, x100 y75 w100 h100 BackgroundTrans vPic, % SplashFrameDirectory . "1.png"
+
+Gui, Font, s15 cFFFFFF, Nexa Heavy
+Gui, Add, Text, x75 y245 w200 h38 BackgroundTrans  0x200 vCaption50, logging you in...
+
+; Show the splash screen
+Gui, Show, w%SplashWidth% h%SplashHeight%, Splash Screen
+
+; Declare currentFrame variable globally
+currentFrame := 1
+
+; Start the animation loop (set timer)
+SetTimer, UpdateSplashAnimation, % SplashFrameDelay
+SetTimer, ChangeText1, -500  ; Wait 2 seconds before changing text
+
+Return
+
+; Function to update the animation frames
+UpdateSplashAnimation:
+    frame := SplashFrameDirectory . currentFrame . ".png"
+    
+    ; Change the displayed image to the current frame
+    GuiControl, , Pic, % frame
+
+    ; Increment the frame index and loop back if necessary
+    currentFrame++
+    if (currentFrame > SplashTotalFrames)
+    {
+        currentFrame := 1  ; Reset to the first frame
+    }
+Return
+
+ChangeText1:
+    GuiControl,, Caption50, loading Gui  ; Change the text
+    GuiControl, Move, Caption50, x94    ; Adjust position if necessary
+    SetTimer, ChangeText2, -1000        ; Wait 2 seconds before changing text to "Done!"
+Return
+
+ChangeText2:
+    GuiControl,, Caption50, Done!       ; Change the text to "Done!"
+    GuiControl, Move, Caption50, x120   ; Adjust position if necessary
+    SetTimer, GuiClose1, -1000          ; Close the splash screen after 1 second
+Return
+
+GuiClose1:
+    Gui, Destroy 
+
+
+
+
+
+Gui, +LastFound +AlwaysOnTop -Caption +ToolWindow
+WinSet, Transparent, 255
+Gui, Color, 151515, 171717
+Gui, Margin, 7, 7
+
+hRgn := DllCall("CreateRoundRectRgn", "int", 0, "int", 0, "int", (Width*0.75) + 1, "int", (Height*0.75) + 1, "int", CornerRadius*0.75, "int", CornerRadius*0.75, "ptr")
+DllCall("SetWindowRgn", "ptr", WinExist(), "ptr", hRgn, "int", true)
+DllCall("DeleteObject", "ptr", hRgn)
+
+Gui, Add, Picture, % "x-1 y-1 w1200 h34", assets/color1.png
+Control, ExStyle, -0x20000, , ahk_id %HPROG%
+Gui, Add, Text, % "x55 y-1 w" Width*0.75 " h26 BackgroundTrans Center 0x200 gGuiMove vCaption c232323", 
+
+
+Gui, Add, Picture, x15 y49 w741 h445 vPic8, assets/rectangle10.png
+Gui, Add, Picture, x15 y49 w236 h181 vPic1, assets/rectangle2.png
+Gui, Add, Picture, x266 y49 w236 h181 vPic2, assets/rectangle2.png
+Gui, Add, Picture, x15 y247 w236 h247 vPic3, assets/rectangle4.png
+Gui, Add, Picture, x266 y247 w236 h247 vPic4, assets/rectangle4.png
+Gui, Add, Picture, x520 y49 w236 h250 vPic5, assets/rectangle7.png
+Gui, Add, Picture, x520 y319 w236 h174 vPic6, assets/rectangle2.png
+Gui, Add, Picture, x790 y49 w80 h445 vPic7, assets/rectangle9.png
+
+Gui, Font, s15 cFFFFFF, Nexa Heavy
+Gui, Add, Text, x30 y64 w50 h50 BackgroundTrans  0x200 vCaption23, Misc
+Gui, Add, Picture, x177 y62 w46 h46 BackgroundTrans vMiscIcon, assets/star.png
+
+Gui, Add, Text, x30 y64 w84 h38 BackgroundTrans  0x200 vCaption2, Binding
+Gui, Add, Picture, x177 y62 w46 h46 BackgroundTrans vKeyboardIcon, assets/keyboard.png
+Gui, Add, Text, x280 y64 w101 h38 BackgroundTrans  0x200 vCaption9, Detection
+Gui, Add, Picture, x441 y62 w46 h46 BackgroundTrans vCrosshairIcon, assets/crosshair.png
+Gui, Add, Text, x280 y262 w101 h38 BackgroundTrans  0x200 vCaption12, Camlock
+Gui, Add, Picture, x441 y258 w46 h46 BackgroundTrans vMouseIcon, assets/mouse.png
+Gui, Add, Text, x540 y64 w101 h38 BackgroundTrans  0x200 vCaption16, Prediction
+Gui, Add, Picture, x690 y62 w46 h46 BackgroundTrans vBrainIcon, assets/brain.png
+Gui, Add, Picture, x806 y62 w50 h50 BackgroundTrans vPage1Icon, assets/Page1de.png
+Gui, Add, Picture, x806 y62 w50 h50 BackgroundTrans gShowPage1 vPage1Icon2, assets/Page1.png
+Gui, Add, Picture, x806 y150 w50 h50 BackgroundTrans gShowPage2 vPage2Icon, assets/Page2.png
+Gui, Add, Picture, x806 y150 w50 h50 BackgroundTrans vPage2Icon2, assets/Page2de.png
+
+Gui, Font, s12 cFFFFFF, Nexa Heavy
+Gui, Add, Text, x30 y117 w84 h38 BackgroundTrans  0x200 vCaption3, Keybind
+Gui, Add, Text, x30 y117 w84 h38 BackgroundTrans  0x200 vCaption24, Dot
+Gui, Add, Picture, x135 y117 w45 h38 BackgroundTrans vSwitchPicControl3 gToggleSwitch3, %SwitchPic3%
+Gui, Add, Picture, x135 y124 w84 h23 BackgroundTrans vRectangle3Icon1, assets/rectangle3.png
+Gui, Add, Text, x280 y117 w84 h38 BackgroundTrans  0x200 vCaption10, Sensitivity
+Gui, Add, Picture, x386 y124 w84 h23 BackgroundTrans vRectangle3Icon2, assets/rectangle3.png
+Gui, Add, Text, x280 y315 w105 h38 BackgroundTrans  0x200 vCaption13, Pixels
+Gui, Add, Picture, x386 y323 w84 h23 BackgroundTrans vRectangle3Icon3, assets/rectangle3.png
+Gui, Add, Text, x280 y367 w120 h38 BackgroundTrans  0x200 vCaption14, Shake 
+Gui, Add, Picture, x386 y375 w84 h23 BackgroundTrans vRectangle3Icon4, assets/rectangle3.png
+Gui, Add, Text, x280 y420 w105 h38 BackgroundTrans  0x200 vCaption15, Smoothness
+Gui, Add, Picture, x386 y428 w84 h23 BackgroundTrans vRectangle3Icon5, assets/rectangle3.png
+Gui, Add, Text, x540 y117 w84 h38 BackgroundTrans  0x200 vCaption17, Offset Y
+Gui, Add, Picture, x660 y124 w84 h23 BackgroundTrans vRectangle3Icon6, assets/rectangle3.png
+Gui, Add, Text, x540 y155 w84 h38 BackgroundTrans  0x200 vCaption18, Enable
+Gui, Add, Picture, x660 y155 w45 h38 BackgroundTrans vSwitchPicControl2 gToggleSwitch2, %SwitchPic2%
+Gui, Add, Text, x540 y193 w84 h38 BackgroundTrans  0x200 vCaption19, Pred X
+Gui, Add, Picture, x660 y200 w84 h23 BackgroundTrans vRectangle3Icon7, assets/rectangle3.png
+Gui, Add, Text, x540 y231 w84 h38 BackgroundTrans  0x200 vCaption20, Pred Y
+Gui, Add, Picture, x660 y238 w84 h23 BackgroundTrans vRectangle3Icon8, assets/rectangle3.png
+Gui, Add, Picture, x533 y339 w206 h80 BackgroundTrans vRectangle8Icon, assets/rectangle8.png
+Gui, Add, Text, x630 y339 w84 h38 BackgroundTrans  0x200 vCaption21, welcome to
+Gui, Add, Text, x630 y360 w84 h38 BackgroundTrans  0x200 vCaption22, zyul2025
+Gui, Add, Picture, x533 y339 w80 h80 BackgroundTrans vAccountIcon, assets/account.png
+Gui, Add, Picture, x543 y430 w58 h35 BackgroundTrans gInjectClick vInjectIcon, assets/inject.png
+Gui, Add, Picture, x611 y430 w58 h35 BackgroundTrans gPictureClick vSaveIcon, assets/save.png
+Gui, Add, Picture, x679 y430 w58 h35 BackgroundTrans gClickImport vImportIcon, assets/import.png
+
+Gui, Add, Text, x30 y155 w84 h38 BackgroundTrans  0x200 vCaption4, Toggle
+Gui, Add, Text, x30 y155 w150 h38 BackgroundTrans  0x200 vCaption25, Dot Opac.
+Gui, Add, Text, x30 y193 w150 h38 BackgroundTrans  0x200 vCaption26, FOV Opac.
+Gui, Add, Picture, x135 y162 w84 h23 BackgroundTrans vRectangle3Icon12, assets/rectangle3.png
+Gui, Add, Picture, x135 y200 w84 h23 BackgroundTrans vRectangle3Icon13, assets/rectangle3.png
+Gui, Add, Picture, x135 y155 w45 h38 BackgroundTrans vSwitchPicControl gToggleSwitch, %SwitchPic%
+Gui, Add, Text, x280 y155 w84 h38 BackgroundTrans  0x200 vCaption11, Hexcode
+Gui, Add, Picture, x386 y162 w84 h23 BackgroundTrans vRectangle3Icon9, assets/rectangle3.png
+
+Gui, Font, s7 cFFFFFF, Nexa Heavy
+
+; Add an input box for the keybind next to "Keybind" and limit it to 1 character
+Gui, Add, Edit, %gui_control_options% x150 y130 w53 h15 vKeybindInput gUpdateKeybind -VScroll, %Keybindinput%
+
+
+Gui, Font, s15 cFFFFFF, Nexa Heavy
+Gui, Add, Text, x30 y262 w84 h38 BackgroundTrans  0x200 vCaption5, FOV
+Gui, Add, Picture, x177 y258 w45 h45 BackgroundTrans vEyeIcon, assets/eye.png
+
+Gui, Font, s12 cFFFFFF, Nexa Heavy
+Gui, Add, Text, x30 y315 w84 h38 BackgroundTrans  0x200 vCaption6, FOV X
+Gui, Add, Text, x30 y367 w84 h38 BackgroundTrans  0x200 vCaption7, FOV Y
+Gui, Add, Text, x30 y420 w84 h38 BackgroundTrans  0x200 vCaption8, Visible
+Gui, Add, Picture, x135 y420 w45 h38 BackgroundTrans vSwitchPicControl1 gToggleSwitch1, %SwitchPic1%
+Gui, Add, Picture, x135 y323 w84 h23 BackgroundTrans vRectangle3Icon10, assets/rectangle3.png
+Gui, Add, Picture, x135 y375 w84 h23 BackgroundTrans vRectangle3Icon11, assets/rectangle3.png
+
+Gui, Font, s7 cFFFFFF, Nexa Heavy
+
+Gui, Add, Edit, %gui_control_options% x150 y328 w53 h15 vFovX gUpdateFovX -VScroll, %FovX%
+Gui, Add, Edit, %gui_control_options% x150 y381 w53 h15 vFovY gUpdateFovY -VScroll, %FovY%
+Gui, Add, Edit, %gui_control_options% x401 y130 w53 h15 vSenstiv gUpdateDetection -VScroll, %Senstiv%
+Gui, Add, Edit, %gui_control_options% x401 y328 w53 h15 vPixel gUpdatePixel -VScroll, %Pixel%
+Gui, Add, Edit, %gui_control_options% x401 y381 w53 h15 vFactor gUpdateFactor -VScroll, %Factor%
+Gui, Add, Edit, %gui_control_options% x401 y434 w53 h15 vSmooth gUpdateSmooth -VScroll, %Smooth%
+Gui, Add, Edit, %gui_control_options% x675 y130 w53 h15 vOffset gUpdateOffset -VScroll, %Offset%
+Gui, Add, Edit, %gui_control_options% x151 y168 w53 h15 vDotopac gUpdateDotopac -VScroll, %Dotopac%
+Gui, Add, Edit, %gui_control_options% x151 y206 w53 h15 vFOVopac gUpdateFOVopac -VScroll, %FOVopac%
+
+Gui, Add, Edit, %gui_control_options% x675 y206 w53 h15 vPredX gUpdatePredX -VScroll, %PredX%
+Gui, Add, Edit, %gui_control_options% x675 y244 w53 h15 vPredY gUpdatePredY -VScroll, %PredY%
+
+Gui, Font, s6 cFFFFFF, Nexa Heavy
+Gui, Add, Edit, %gui_control_options% x401 y168 w53 h15 vHexcode gUpdateHexCode -VScroll, %Hexcode%
+
+Gui, Font, s13 cFFFFFF, Segoe UI
+
+GuiControl, Hide, Pic8
+GuiControl, Hide, Caption23
+GuiControl, Hide, Page2Icon2
+GuiControl, Hide, Page1Icon2
+GuiControl, Hide, Caption24
+GuiControl, Hide, Rectangle3Icon12
+GuiControl, Hide, SwitchPicControl3
+GuiControl, Hide, Caption25
+GuiControl, Hide, Dotopac
+GuiControl, Hide, Caption26
+GuiControl, Hide, Rectangle3Icon13
+GuiControl, Hide, FOVopac
+GuiControl, Hide, MiscIcon
+
+
+Gui, Show, w%Width% h%Height%, ZyuL.io AHK Camlock Executor by @mk3o
+
+
+
+
+Return
+
+GuiMove:
+    PostMessage, 0xA1, 2,,, A
+Return
+
+ShowPage2:
+    GuiControl, Hide, Caption2
+    GuiControl, Hide, Caption3
+    GuiControl, Hide, Caption4
+    GuiControl, Hide, Caption5
+    GuiControl, Hide, Caption6
+    GuiControl, Hide, Caption7
+    GuiControl, Hide, Caption8
+    GuiControl, Hide, Caption9
+    GuiControl, Hide, Caption10
+    GuiControl, Hide, Caption11
+    GuiControl, Hide, Caption12
+    GuiControl, Hide, Caption13
+    GuiControl, Hide, Caption14
+    GuiControl, Hide, Caption15
+    GuiControl, Hide, Caption16
+    GuiControl, Hide, Caption17
+    GuiControl, Hide, Caption18
+    GuiControl, Hide, Caption19
+    GuiControl, Hide, Caption20
+    GuiControl, Hide, Caption21
+    GuiControl, Hide, Caption22
+    GuiControl, Hide, SwitchPicControl
+    GuiControl, Hide, SwitchPicControl1
+    GuiControl, Hide, SwitchPicControl2
+    GuiControl, Hide, Rectangle3Icon1
+    GuiControl, Hide, Rectangle3Icon2
+    GuiControl, Hide, Rectangle3Icon3
+    GuiControl, Hide, Rectangle3Icon4
+    GuiControl, Hide, Rectangle3Icon5
+    GuiControl, Hide, Rectangle3Icon6
+    GuiControl, Hide, Rectangle3Icon7
+    GuiControl, Hide, Rectangle3Icon8
+    GuiControl, Hide, Rectangle3Icon9
+    GuiControl, Hide, Rectangle3Icon10
+    GuiControl, Hide, Rectangle3Icon11
+    GuiControl, Hide, Rectangle8Icon
+    GuiControl, Hide, Rectangle4Icon  
+    GuiControl, Hide, FovX
+    GuiControl, Hide, FovY
+    GuiControl, Hide, Senstiv
+    GuiControl, Hide, Pixel
+    GuiControl, Hide, Factor
+    GuiControl, Hide, Smooth
+    GuiControl, Hide, Offset
+    GuiControl, Hide, PredX
+    GuiControl, Hide, PredY
+    GuiControl, Hide, Hexcode
+    GuiControl, Hide, Keybindinput
+    GuiControl, Hide, KeyboardIcon
+    GuiControl, Hide, CrosshairIcon
+    GuiControl, Hide, MouseIcon
+    GuiControl, Hide, BrainIcon
+    GuiControl, Hide, EyeIcon
+    GuiControl, Hide, AccountIcon
+    GuiControl, Hide, InjectIcon
+    GuiControl, Hide, ImportIcon
+    GuiControl, Hide, SaveIcon
+    GuiControl, Hide, Pic1
+    GuiControl, Hide, Pic2
+    GuiControl, Hide, Pic3
+    GuiControl, Hide, Pic4
+    GuiControl, Hide, Pic5
+    GuiControl, Hide, Pic6
+    GuiControl, Hide, Page2Icon
+    GuiControl, Hide, Page1Icon
+
+    GuiControl, Show, Pic8
+    GuiControl, Show, Caption23
+	GuiControl, Show, Page2Icon2
+    GuiControl, Show, Page1Icon2
+    GuiControl, Show, Caption24
+    GuiControl, Show, SwitchPicControl3
+    GuiControl, Show, Caption25
+    GuiControl, Show, Rectangle3Icon12
+    GuiControl, Show, Dotopac
+    GuiControl, Show, Caption26
+    GuiControl, Show, Rectangle3Icon13
+    GuiControl, Show, FOVopac
+    GuiControl, Show, MiscIcon
+return
+
+ShowPage1:
+	GuiControl, Hide, Pic8
+	GuiControl, Hide, Caption23
+	GuiControl, Hide, Page2Icon2
+	GuiControl, Hide, Page1Icon2
+	GuiControl, Hide, Caption24
+	GuiControl, Hide, SwitchPicControl3
+	GuiControl, Hide, Caption25
+	GuiControl, Hide, Rectangle3Icon12
+	GuiControl, Hide, Dotopac
+	GuiControl, Hide, Caption26
+	GuiControl, Hide, Rectangle3Icon13
+	GuiControl, Hide, FOVopac
+	GuiControl, Hide, MiscIcon
+
+
+	GuiControl, Show, Caption2
+	GuiControl, Show, Caption3
+	GuiControl, Show, Caption4
+	GuiControl, Show, Caption5
+	GuiControl, Show, Caption6
+	GuiControl, Show, Caption7
+	GuiControl, Show, Caption8
+	GuiControl, Show, Caption9
+	GuiControl, Show, Caption10
+	GuiControl, Show, Caption11
+	GuiControl, Show, Caption12
+	GuiControl, Show, Caption13
+	GuiControl, Show, Caption14
+	GuiControl, Show, Caption15
+	GuiControl, Show, Caption16
+	GuiControl, Show, Caption17
+	GuiControl, Show, Caption18
+	GuiControl, Show, Caption19
+	GuiControl, Show, Caption20
+	GuiControl, Show, Caption21
+	GuiControl, Show, Caption22
+	GuiControl, Show, SwitchPicControl
+	GuiControl, Show, SwitchPicControl1
+	GuiControl, Show, SwitchPicControl2
+	GuiControl, Show, Rectangle3Icon1
+	GuiControl, Show, Rectangle3Icon2
+	GuiControl, Show, Rectangle3Icon3
+	GuiControl, Show, Rectangle3Icon4
+	GuiControl, Show, Rectangle3Icon5
+	GuiControl, Show, Rectangle3Icon6
+	GuiControl, Show, Rectangle3Icon7
+	GuiControl, Show, Rectangle3Icon8
+	GuiControl, Show, Rectangle3Icon9
+	GuiControl, Show, Rectangle3Icon10
+	GuiControl, Show, Rectangle3Icon11
+	GuiControl, Show, Rectangle8Icon
+	GuiControl, Show, Rectangle4Icon  
+	GuiControl, Show, FovX
+	GuiControl, Show, FovY
+	GuiControl, Show, Senstiv
+	GuiControl, Show, Pixel
+	GuiControl, Show, Factor
+	GuiControl, Show, Smooth
+	GuiControl, Show, Offset
+	GuiControl, Show, PredX
+	GuiControl, Show, PredY
+	GuiControl, Show, Hexcode
+	GuiControl, Show, Keybindinput
+	GuiControl, Show, KeyboardIcon
+	GuiControl, Show, CrosshairIcon
+	GuiControl, Show, MouseIcon
+	GuiControl, Show, BrainIcon
+	GuiControl, Show, EyeIcon
+	GuiControl, Show, AccountIcon
+	GuiControl, Show, InjectIcon
+	GuiControl, Show, ImportIcon
+	GuiControl, Show, SaveIcon
+	GuiControl, Show, Pic1
+	GuiControl, Show, Pic2
+	GuiControl, Show, Pic3
+	GuiControl, Show, Pic4
+	GuiControl, Show, Pic5
+	GuiControl, Show, Pic6
+	GuiControl, Show, Page2Icon
+	GuiControl, Show, Page1Icon
+return
+
+; Pressing DEL will minimize the GUI
+Del::
+    if (guiMinimized) {
+        Gui, Show ; Restore the GUI
+        guiMinimized := false
+    } else {
+        Gui, Hide ; Hide the GUI
+        guiMinimized := true
+    }
+    return
+
+; Pressing Right Shift will close the GUI
+RShift::
+    ExitApp,
+    return
+
+
+
+
+PictureClick:
+    ; Show the Save File Dialog to let the user choose a location and name
+    FileSelectFile, selectedFile, S16, %txtFilePath%, Save Config As, Text Files (*.txt)
+    
+    ; If the user selects a file, save the content
+    if (selectedFile) {
+        FileAppend, %jsonContent%, %selectedFile%
+    } else {
+
+    }
+return
+
+
+InjectClick:
+    Run, data\cam.ahk, , Hide
+    Return
+Return
+
+ClickImport:
+    ; Show the Open File Dialog to select a .txt file to replace config.json
+
+    FileSelectFile, selectedFile, R16, %A_ScriptDir%, Select a .txt file to import, Text Files (*.txt)
+    
+    ; Check if a file was selected
+    if (selectedFile) {
+   
+        FileRead, importedContent, %selectedFile%
+   
+
+        ; Define the path to config.json
+    
+
+        ; Check if the file exists before attempting to delete
+        if (FileExist(jsonFilePath)) {
+       
+            FileDelete, %jsonFilePath% ; Delete the existing config.json file
+		} else {
+           
+        }
+
+        ; Write the content of the selected file to config.json
+        FileAppend, %importedContent%, %jsonFilePath% 
+        
+
+        ; Restart the script
+        MsgBox, please rerun script
+        ExitApp 
+        
+        
+    } else {
+        MsgBox, No file selected. ; Debugging message
+    }
+return
+
+ToggleSwitch:
+; Toggle between "on" and "off" images when clicked
+if (SwitchPic := (SwitchPic = "assets/SwitchOFF.png" ? "assets/SwitchON.png" : "assets/SwitchOFF.png"))
+{
+    GuiControl,, SwitchPicControl, %SwitchPic% ; Update the image based on the current state
+
+    ; Toggle the Toggle state in the JSON data (flip the value)
+    jsonData.Binding.Toggle := (jsonData.Binding.Toggle = 1) ? 0 : 1 ; This properly flips the value between 0 and 1
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+}
+Return
+
+ToggleSwitch1:
+; Toggle between "on" and "off" images when clicked
+if (SwitchPic1 := (SwitchPic1 = "assets/SwitchOFF.png" ? "assets/SwitchON.png" : "assets/SwitchOFF.png"))
+{
+    GuiControl,, SwitchPicControl1, %SwitchPic1% ; Update the image based on the current state
+
+    ; Toggle the Toggle state in the JSON data (flip the value)
+    jsonData.FOVCircle.Visible := (jsonData.FOVCircle.Visible = 1) ? 0 : 1 ; This properly flips the value between 0 and 1
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+}
+Return
+
+ToggleSwitch2:
+; Toggle between "on" and "off" images when clicked
+if (SwitchPic2 := (SwitchPic2 = "assets/SwitchOFF.png" ? "assets/SwitchON.png" : "assets/SwitchOFF.png"))
+{
+    GuiControl,, SwitchPicControl2, %SwitchPic2% ; Update the image based on the current state
+
+    ; Toggle the Toggle state in the JSON data (flip the value)
+    jsonData.Prediction.Prediction := (jsonData.Prediction.Prediction = 1) ? 0 : 1 ; This properly flips the value between 0 and 1
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+}
+Return
+
+ToggleSwitch3:
+; Toggle between "on" and "off" images when clicked
+if (SwitchPic3 := (SwitchPic3 = "assets/SwitchOFF.png" ? "assets/SwitchON.png" : "assets/SwitchOFF.png"))
+{
+    GuiControl,, SwitchPicControl3, %SwitchPic3% ; Update the image based on the current state
+
+    ; Toggle the Toggle state in the JSON data (flip the value)
+    jsonData.PlayerDetection.Dot := (jsonData.PlayerDetection.Dot = 1) ? 0 : 1 ; This properly flips the value between 0 and 1
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+}
+Return
+
+UpdateKeybind:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.Binding.AimbotKey := KeybindInput  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdateFovX:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.FOVCircle.FOVCircleX := FovX  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdateFovY:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.FOVCircle.FOVCircleY := FovY  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdateFOVopac:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.FOVCircle.Opacity := FOVopac  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdateDetection:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.PlayerDetection.DetectionSensitivity := Senstiv  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+updateHexcode:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.PlayerDetection.HexCode := Hexcode  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdateDotopac:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.PlayerDetection.DotOpacity := Dotopac  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdatePixel:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.MouseMovement.PixelMoveAmount := Pixel  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdateFactor:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.MouseMovement.SpeedX := Factor
+    jsonData.MouseMovement.SpeedY := Factor  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdateSmooth:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.MouseMovement.SmoothnessX := Smooth
+    jsonData.MouseMovement.SmoothnessY := Smooth  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdateOffset:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.Prediction.OffsetY := Offset  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdatePredX:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.Prediction.PredictionX := PredX  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+UpdatePredY:
+    Gui, Submit, NoHide ; Submit all GUI values, including the keybind input
+    jsonData.Prediction.PredictionY := PredY  ; Update the keybind in the JSON data
+    
+    ; Save the updated JSON data back to the file
+    SaveJson(jsonFilePath, jsonData)
+Return
+
+GuiClose:
+ExitApp
+
+; Function to load JSON data
+LoadJson(filePath) {
+    FileRead, jsonStr, %filePath%
+    return Json.Load(jsonStr)
+}
+
+; Function to save JSON data
+SaveJson(filePath, jsonData) {
+    jsonStr := Json.Dump(jsonData)
+    FileDelete, %filePath%  ; Delete the existing file
+    FileAppend, %jsonStr%, %filePath% ; Save the updated JSON data
+}
+
+ExitApp
+#SingleInstance off
