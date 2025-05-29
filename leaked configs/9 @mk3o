@@ -1,0 +1,31 @@
+{
+  "Binding": {
+    "AimbotKey": "XButton2",
+    "Toggle": false
+  },
+  "PlayerDetection": {
+    "DetectionSensitivity": 6,
+    "HexCode": "0x000000",
+    "Dot": false,
+    "DotOpacity": 255
+  },
+"MouseMovement": {
+    "SmoothnessX": 110,
+    "SmoothnessY": 112,
+    "SpeedX": 0.074,
+    "SpeedY": 0.058,
+    "PixelMoveAmount": 1
+  },
+  "Prediction": {
+    "Prediction": false,
+    "PredictionX": 1,
+    "PredictionY": 1,
+    "OffsetY": 35
+  },
+  "FOVCircle": {
+    "FOVCircleX": 370,
+    "FOVCircleY": 390,
+    "Visible": true,
+    "Opacity": 100
+  }
+}
